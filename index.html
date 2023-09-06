@@ -1,7 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<h1>Temperament</h1>
-
 <canvas height="400" width="400" id="canvas"></canvas>
 
 <fieldset>
@@ -62,8 +60,8 @@ for (let i = 59; i > 20; i--) {
 
 // Default
 const frequencies = new Array(200);
-let fluctuationRatio = 0.00005;
-// let fluctuationRatio = 0;
+// let fluctuationRatio = 0.00005;
+let fluctuationRatio = 0;
 const addFluctuation = (freq) => {
     const ratio = fluctuationRatio;
     return freq * (1.0 + ratio * (Math.random() - 0.5));
@@ -91,20 +89,9 @@ yNode.connect(analyzerY);
 const oscillators = {}
 let counter = 0;
 
-//--------------------------------
-// Keyboard interactions
-//--------------------------------
-window.addEventListener('keypress', (e) => {
-    // Ignoring repeat pressing
-    if (e.repeat) {
-        return;
-    }
-    
-    // Ignoring unsupported keys
-    const MIDIidx = keyToMIDI[e.key];
-    if (!MIDIidx) {
-        return;
-    }
+// Control functions
+const noteOn = (key) => {
+    const MIDIidx = key;
 
     // Avoiding double allocation
     if (MIDIidx in oscillators){
@@ -137,6 +124,35 @@ window.addEventListener('keypress', (e) => {
         oscillator.connect(yNode);
     }
     counter = 1 - counter;
+}
+
+const noteOff = (key) => {
+    const MIDIidx = key;
+
+    if (!(MIDIidx in oscillators)) {
+        return;
+    }
+
+    oscillators[MIDIidx].stop();
+    delete oscillators[MIDIidx];
+}
+
+//--------------------------------
+// Keyboard interactions
+//--------------------------------
+window.addEventListener('keypress', (e) => {
+    // Ignoring repeat pressing
+    if (e.repeat) {
+        return;
+    }
+    
+    // Ignoring unsupported keys
+    const MIDIidx = keyToMIDI[e.key];
+    if (!MIDIidx) {
+        return;
+    }
+
+    noteOn(MIDIidx);
 })
 
 window.addEventListener('keyup', (e) => {
@@ -145,12 +161,7 @@ window.addEventListener('keyup', (e) => {
         return;
     }
 
-    if (!(MIDIidx in oscillators)) {
-        return;
-    }
-
-    oscillators[MIDIidx].stop();
-    delete oscillators[MIDIidx];
+    noteOff(MIDIidx);
 })
 
 
@@ -171,6 +182,46 @@ checkboxJustIntonationC.addEventListener('change', (e) => {
         frequencies[i] = addFluctuation(frequenciesJustIntonationC[i])
     }
 })
+
+//================================
+// MIDI input handlers (Web MIDI API)
+//================================
+
+const getMIDIMessage = (message) => {
+    var command = message.data[0];
+    var key = message.data[1];
+    
+    // noteOn
+    if (144 <= command && command <= 159) {
+        noteOn(key);
+    }
+
+    // noteOff
+    if (128 <= command && command <= 143) {
+        noteOff(key);
+    }
+}
+
+if (navigator.requestMIDIAccess) {
+    console.log('This browser supports WebMIDI!');
+} else {
+    console.log('WebMIDI is not supported in this browser.');
+}
+
+const onMIDISuccess = (midiAccess) => {
+    console.log(midiAccess);
+    for (var input of midiAccess.inputs.values()) {
+        input.onmidimessage = getMIDIMessage;
+    }
+}
+
+const onMIDIFailure = () => {
+    console.log('Could not access your MIDI devices.');
+}
+
+navigator.requestMIDIAccess()
+    .then(onMIDISuccess, onMIDIFailure);
+
 
 
 //================================
