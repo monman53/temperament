@@ -60,8 +60,8 @@ for (let i = 59; i > 20; i--) {
 
 // Default
 const frequencies = new Array(200);
-// let fluctuationRatio = 0.00005;
-let fluctuationRatio = 0;
+let fluctuationRatio = 0.00005;
+// let fluctuationRatio = 0;
 const addFluctuation = (freq) => {
     const ratio = fluctuationRatio;
     return freq * (1.0 + ratio * (Math.random() - 0.5));
