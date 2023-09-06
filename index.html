@@ -20,10 +20,10 @@ const actx = new AudioContext();
 // Tempered
 const frequenciesTempered = new Array(200);
 for (let i = 69; i < 109; i++) {
-    frequenciesTempered[i] = 440 * Math.pow(2, 1.0/12 * (i-69))
+    frequenciesTempered[i] = 440 * Math.pow(2, 1.0/12 * (i-69));
 }
 for (let i = 69; i > 20; i--) {
-    frequenciesTempered[i] = 440 * Math.pow(2, -1.0/12 * (69-i))
+    frequenciesTempered[i] = 440 * Math.pow(2, -1.0/12 * (69-i));
 }
 
 // Just intonation
@@ -50,9 +50,17 @@ for (let i = 59; i > 20; i--) {
 
 // Default
 frequencies = frequenciesJustIntonationC;
+frequencies = frequenciesTempered;
+const addFluctuation = (freq) => {
+    const ratio = 0.00005;
+    return freq * (1.0 + ratio * (Math.random() - 0.5));
+}
+for (let i = 0; i < 200; i++) {
+    frequencies[i] = addFluctuation(frequencies[i])
+}
 
 // Keyboard key to MIDI number map
-const keys = "qw3e4rt6y7u8io0p-[]";
+const keys = "qw3e4rt6y7u8io0p-[]" + "azsxdcvgbhnmk,l.;/";
 keyToMIDI = {}
 for (let i = 0; i < keys.length; i++) {
     keyToMIDI[keys[i]] = 59 + i;
