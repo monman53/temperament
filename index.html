@@ -6,11 +6,16 @@
 
 <script>
 
+//================================
+// Synthesizer (Web Audio API)
+//================================
+
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 const actx = new AudioContext();
 
 // Frequency array
 // index: MIDI number
+// A0: 21, C4: 60, A4: 69, C5: 72, C8: 108
 frequencies = new Array(200);
 for (let i = 69; i < 109; i++) {
     frequencies[i] = 440 * Math.pow(2, 1.0/12 * (i-69))
@@ -30,9 +35,19 @@ for (let i = 0; i < keys.length; i++) {
 const oscillators = {}
 let counter = 0;
 
+// Intermediate nodes for Lissajous curve visualization
 const xNode = actx.createGain();
 const yNode = actx.createGain();
+const analyzerX = actx.createAnalyser();
+const analyzerY = actx.createAnalyser();
+analyzerX.fftSize = 1 << 10
+analyzerY.fftSize = 1 << 10
+xNode.connect(analyzerX);
+yNode.connect(analyzerY);
 
+//--------------------------------
+// Keyboard interactions
+//--------------------------------
 window.addEventListener('keypress', (e) => {
     if (e.repeat) {
         return;
@@ -77,6 +92,14 @@ window.addEventListener('keyup', (e) => {
     delete oscillators[MIDIidx];
 })
 
+//================================
+// Lissajous curve visualization (WebGL)
+//================================
+
+//--------------------------------
+// Shaders
+//--------------------------------
+
 const vertexShader = `#version 300 es
 
 precision highp float;
@@ -114,6 +137,10 @@ void main(void) {
 }
 `;
 
+//--------------------------------
+// Support functions for WebGL
+//--------------------------------
+
 function createShader(gl, source, type) {
   const shader = gl.createShader(type);
   gl.shaderSource(shader, source);
@@ -143,6 +170,10 @@ function createVbo(gl, array, usage) {
   return vbo;
 }
 
+//--------------------------------
+// WebGL setup
+//--------------------------------
+
 const canvas = document.getElementById("canvas");
 const gl = canvas.getContext('webgl2');
 gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -150,13 +181,7 @@ const program = createProgram(gl,
     createShader(gl, vertexShader, gl.VERTEX_SHADER),
     createShader(gl, fragmentShader, gl.FRAGMENT_SHADER));
 
-const analyzerX = actx.createAnalyser();
-const analyzerY = actx.createAnalyser();
-analyzerX.fftSize = 1 << 10
-analyzerY.fftSize = 1 << 10
-xNode.connect(analyzerX);
-yNode.connect(analyzerY);
-
+// Buffers
 const xArray = new Float32Array(analyzerX.fftSize);
 const yArray = new Float32Array(analyzerY.fftSize);
 const xArrayVbo = createVbo(gl, xArray, gl.DYNAMIC_DRAW);
@@ -165,25 +190,22 @@ const yArrayVbo = createVbo(gl, yArray, gl.DYNAMIC_DRAW);
 // Render callback
 let frames = 0;
 let startTime = new Date().getTime();
-
 const render = () => {
     // Calculate FPS
     frames += 1;
     let endTime = new Date().getTime();
-
     if (endTime - startTime >= 1000) {
         // fps.innerText = frames / (endTime - startTime) * 1000;
-        
         startTime = endTime;
         frames = 0;
     }
 
+    // Getting current waves
     analyzerX.getFloatTimeDomainData(xArray);
     analyzerY.getFloatTimeDomainData(yArray);
 
     // Canvas rendering
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
+    // Binding x-coordinates array
     gl.bindBuffer(gl.ARRAY_BUFFER, xArrayVbo);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, xArray);
     gl.useProgram(program);
@@ -191,6 +213,7 @@ const render = () => {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
 
+    // Binding x-coordinates array
     gl.bindBuffer(gl.ARRAY_BUFFER, yArrayVbo);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, yArray);
     gl.useProgram(program);
@@ -198,12 +221,15 @@ const render = () => {
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0);
 
+    // Draw lines
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.LINE_STRIP, 0, xArray.length);
 
     // Next frame
     requestAnimationFrame(render);
 }
 
+// Rendering bootstrap
 requestAnimationFrame(render);
 
 </script>
