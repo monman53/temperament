@@ -61,8 +61,10 @@ window.addEventListener('keypress', (e) => {
     counter = 1 - counter;
     amp.connect(actx.destination);
 
-    oscillator.start()
-    oscillators[MIDIidx] = oscillator
+    if (!(MIDIidx in oscillators)){
+        oscillator.start()
+        oscillators[MIDIidx] = oscillator
+    }
 })
 
 window.addEventListener('keyup', (e) => {
@@ -89,6 +91,7 @@ void main(void) {
 //   if (gl_VertexID % 2 == 0) {
 //     y = 1.0;
 //   }
+  gl_PointSize = 10.0;
   gl_Position = vec4(
     x_value * 0.3,
     y_value * 0.3,
@@ -149,6 +152,8 @@ const program = createProgram(gl,
 
 const analyzerX = actx.createAnalyser();
 const analyzerY = actx.createAnalyser();
+analyzerX.fftSize = 1 << 10
+analyzerY.fftSize = 1 << 10
 xNode.connect(analyzerX);
 yNode.connect(analyzerY);
 
