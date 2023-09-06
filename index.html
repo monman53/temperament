@@ -1,0 +1,204 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<h1>Temperament</h1>
+
+<canvas height="400" width="400" id="canvas"></canvas>
+
+<script>
+
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+const actx = new AudioContext();
+
+// Frequency array
+// index: MIDI number
+frequencies = new Array(200);
+for (let i = 69; i < 109; i++) {
+    frequencies[i] = 440 * Math.pow(2, 1.0/12 * (i-69))
+}
+for (let i = 69; i > 20; i--) {
+    frequencies[i] = 440 * Math.pow(2, -1.0/12 * (69-i))
+}
+
+// Keyboard key to MIDI number map
+const keys = "qw3e4rt6y7u8io0p-[]";
+keyToMIDI = {}
+for (let i = 0; i < keys.length; i++) {
+    keyToMIDI[keys[i]] = 59 + i;
+}
+
+// Oscillator instances
+const oscillators = {}
+let counter = 0;
+
+const xNode = actx.createGain();
+const yNode = actx.createGain();
+
+window.addEventListener('keypress', (e) => {
+    if (e.repeat) {
+        return;
+    }
+    
+    const MIDIidx = keyToMIDI[e.key];
+    if (!MIDIidx) {
+        return;
+    }
+
+    const frequency = frequencies[MIDIidx];
+
+    const oscillator = actx.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, actx.currentTime);
+
+    const amp = actx.createGain();
+    amp.gain.value = 0.1;
+
+    oscillator.connect(amp);
+    if (counter %2 == 0) {
+        oscillator.connect(xNode);
+    } else {
+        oscillator.connect(yNode);
+    }
+    counter = 1 - counter;
+    amp.connect(actx.destination);
+
+    oscillator.start()
+    oscillators[MIDIidx] = oscillator
+})
+
+window.addEventListener('keyup', (e) => {
+    const MIDIidx = keyToMIDI[e.key];
+    if (!MIDIidx) {
+        return;
+    }
+
+    oscillators[MIDIidx].stop();
+    delete oscillators[MIDIidx];
+})
+
+const vertexShader = `#version 300 es
+
+precision highp float;
+
+layout (location = 0) in float x_value;
+layout (location = 1) in float y_value;
+
+//uniform float u_length;
+
+void main(void) {
+//float y = -1.0;
+//   if (gl_VertexID % 2 == 0) {
+//     y = 1.0;
+//   }
+  gl_Position = vec4(
+    x_value * 0.3,
+    y_value * 0.3,
+    0.0,
+    1.0
+  );
+}
+`;
+
+const fragmentShader = `#version 300 es
+
+precision highp float;
+
+out vec4 o_color;
+
+uniform vec3 u_color;
+
+void main(void) {
+  o_color = vec4(0.5, 1.0, 0.5, 1.0);
+}
+`;
+
+function createShader(gl, source, type) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    throw new Error(gl.getShaderInfoLog(shader) + source);
+  }
+  return shader;
+}
+
+function createProgram(gl, vertShader, fragShader) {
+  const program = gl.createProgram();
+  gl.attachShader(program, vertShader);
+  gl.attachShader(program, fragShader);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error(gl.getProgramInfoLog(program));
+  }
+  return program;
+}
+
+function createVbo(gl, array, usage) {
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, array, usage);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  return vbo;
+}
+
+const canvas = document.getElementById("canvas");
+const gl = canvas.getContext('webgl2');
+gl.clearColor(0.0, 0.0, 0.0, 1.0);
+const program = createProgram(gl,
+    createShader(gl, vertexShader, gl.VERTEX_SHADER),
+    createShader(gl, fragmentShader, gl.FRAGMENT_SHADER));
+
+const analyzerX = actx.createAnalyser();
+const analyzerY = actx.createAnalyser();
+xNode.connect(analyzerX);
+yNode.connect(analyzerY);
+
+const xArray = new Float32Array(analyzerX.fftSize);
+const yArray = new Float32Array(analyzerY.fftSize);
+const xArrayVbo = createVbo(gl, xArray, gl.DYNAMIC_DRAW);
+const yArrayVbo = createVbo(gl, yArray, gl.DYNAMIC_DRAW);
+
+// Render callback
+let frames = 0;
+let startTime = new Date().getTime();
+
+const render = () => {
+    // Calculate FPS
+    frames += 1;
+    let endTime = new Date().getTime();
+
+    if (endTime - startTime >= 1000) {
+        // fps.innerText = frames / (endTime - startTime) * 1000;
+        
+        startTime = endTime;
+        frames = 0;
+    }
+
+    analyzerX.getFloatTimeDomainData(xArray);
+    analyzerY.getFloatTimeDomainData(yArray);
+
+    // Canvas rendering
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, xArrayVbo);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, xArray);
+    gl.useProgram(program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, xArrayVbo);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, yArrayVbo);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, yArray);
+    gl.useProgram(program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, yArrayVbo);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0);
+
+    gl.drawArrays(gl.LINE_STRIP, 0, xArray.length);
+
+    // Next frame
+    requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+
+</script>
