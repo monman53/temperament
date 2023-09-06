@@ -4,6 +4,18 @@
 
 <canvas height="400" width="400" id="canvas"></canvas>
 
+<fieldset>
+<legend>Temperament</legend>
+    <label>
+    <input type="radio" name="temperament" value="tempered" id="checkbox-tempered" checked/>
+    Tempered (A = 440 Hz)
+    </label><br>
+    <label>
+    <input type="radio" name="temperament" value="just-intonation-c" id="checkbox-just-intonation-c" />
+    Just intonation (C dur, A = 440 Hz)
+    </label>
+</fieldset>
+
 <script>
 //================================
 // Synthesizer (Web Audio API)
@@ -13,9 +25,9 @@
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 const actx = new AudioContext();
 
-// Frequency array
-// index: MIDI number
-// A0: 21, C4: 60, A4: 69, C5: 72, C8: 108
+// Create frequency arrays
+//   The indices corresponds to MIDI numbers.
+//   e.g) 21: A0, 60: C4, 69: A4, 72: C5, 108: C8
 
 // Tempered
 const frequenciesTempered = new Array(200);
@@ -49,14 +61,15 @@ for (let i = 59; i > 20; i--) {
 }
 
 // Default
-frequencies = frequenciesJustIntonationC;
-frequencies = frequenciesTempered;
+const frequencies = new Array(200);
+let fluctuationRatio = 0.00005;
+// let fluctuationRatio = 0;
 const addFluctuation = (freq) => {
-    const ratio = 0.00005;
+    const ratio = fluctuationRatio;
     return freq * (1.0 + ratio * (Math.random() - 0.5));
 }
 for (let i = 0; i < 200; i++) {
-    frequencies[i] = addFluctuation(frequencies[i])
+    frequencies[i] = addFluctuation(frequenciesTempered[i])
 }
 
 // Keyboard key to MIDI number map
@@ -71,8 +84,6 @@ const xNode = actx.createGain();
 const yNode = actx.createGain();
 const analyzerX = actx.createAnalyser();
 const analyzerY = actx.createAnalyser();
-// analyzerX.fftSize = 1 << 10
-// analyzerY.fftSize = 1 << 10
 xNode.connect(analyzerX);
 yNode.connect(analyzerY);
 
@@ -134,8 +145,31 @@ window.addEventListener('keyup', (e) => {
         return;
     }
 
+    if (!(MIDIidx in oscillators)) {
+        return;
+    }
+
     oscillators[MIDIidx].stop();
     delete oscillators[MIDIidx];
+})
+
+
+//================================
+// UI controllers
+//================================
+
+const checkboxTempered = document.getElementById("checkbox-tempered");
+checkboxTempered.addEventListener('change', (e) => {
+    for (let i = 0; i < 200; i++) {
+        frequencies[i] = addFluctuation(frequenciesTempered[i])
+    }
+})
+
+const checkboxJustIntonationC = document.getElementById("checkbox-just-intonation-c");
+checkboxJustIntonationC.addEventListener('change', (e) => {
+    for (let i = 0; i < 200; i++) {
+        frequencies[i] = addFluctuation(frequenciesJustIntonationC[i])
+    }
 })
 
 
@@ -155,13 +189,7 @@ precision highp float;
 layout (location = 0) in float x_value;
 layout (location = 1) in float y_value;
 
-//uniform float u_length;
-
 void main(void) {
-//float y = -1.0;
-//   if (gl_VertexID % 2 == 0) {
-//     y = 1.0;
-//   }
   gl_PointSize = 10.0;
   gl_Position = vec4(
     x_value * 0.3,
@@ -182,7 +210,8 @@ out vec4 o_color;
 uniform vec3 u_color;
 
 void main(void) {
-  o_color = vec4(0.5, 1.0, 0.5, 1.0);
+  // Green
+  o_color = vec4(0.4, 1.0, 0.4, 1.0);
 }
 `;
 
@@ -254,19 +283,17 @@ const render = () => {
     analyzerY.getFloatTimeDomainData(yArray);
 
     // Canvas rendering
+    gl.useProgram(program);
+
     // Binding x-coordinates array
     gl.bindBuffer(gl.ARRAY_BUFFER, xArrayVbo);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, xArray);
-    gl.useProgram(program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, xArrayVbo);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
 
     // Binding x-coordinates array
     gl.bindBuffer(gl.ARRAY_BUFFER, yArrayVbo);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, yArray);
-    gl.useProgram(program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, yArrayVbo);
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0);
 
