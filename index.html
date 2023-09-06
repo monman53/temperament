@@ -5,11 +5,11 @@
 <canvas height="400" width="400" id="canvas"></canvas>
 
 <script>
-
 //================================
 // Synthesizer (Web Audio API)
 //================================
 
+// Create context
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 const actx = new AudioContext();
 
@@ -31,10 +31,6 @@ for (let i = 0; i < keys.length; i++) {
     keyToMIDI[keys[i]] = 59 + i;
 }
 
-// Oscillator instances
-const oscillators = {}
-let counter = 0;
-
 // Intermediate nodes for Lissajous curve visualization
 const xNode = actx.createGain();
 const yNode = actx.createGain();
@@ -45,41 +41,56 @@ analyzerY.fftSize = 1 << 10
 xNode.connect(analyzerX);
 yNode.connect(analyzerY);
 
+// Oscillator instances
+const oscillators = {}
+let counter = 0;
+
 //--------------------------------
 // Keyboard interactions
 //--------------------------------
 window.addEventListener('keypress', (e) => {
+    // Ignoring repeat pressing
     if (e.repeat) {
         return;
     }
     
+    // Ignoring unsupported keys
     const MIDIidx = keyToMIDI[e.key];
     if (!MIDIidx) {
         return;
     }
 
-    const frequency = frequencies[MIDIidx];
+    // Avoiding double allocation
+    if (MIDIidx in oscillators){
+        return
+    }
 
+    // Create an oscillator
     const oscillator = actx.createOscillator();
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, actx.currentTime);
+    oscillator.frequency.setValueAtTime(frequencies[MIDIidx], actx.currentTime);
 
+    // Connect to the gain node
+    // NOTE: For avoiding distortion
     const amp = actx.createGain();
     amp.gain.value = 0.1;
-
     oscillator.connect(amp);
+
+    // Connect to the output speaker
+    amp.connect(actx.destination);
+
+    // Start oscillator and register
+    oscillator.start()
+    oscillators[MIDIidx] = oscillator
+
+    // Also connect to the visualization nodes
+    // NOTE: Distribute by ping-pong
     if (counter %2 == 0) {
         oscillator.connect(xNode);
     } else {
         oscillator.connect(yNode);
     }
     counter = 1 - counter;
-    amp.connect(actx.destination);
-
-    if (!(MIDIidx in oscillators)){
-        oscillator.start()
-        oscillators[MIDIidx] = oscillator
-    }
 })
 
 window.addEventListener('keyup', (e) => {
@@ -92,6 +103,7 @@ window.addEventListener('keyup', (e) => {
     delete oscillators[MIDIidx];
 })
 
+
 //================================
 // Lissajous curve visualization (WebGL)
 //================================
@@ -100,6 +112,7 @@ window.addEventListener('keyup', (e) => {
 // Shaders
 //--------------------------------
 
+// Vertex shader
 const vertexShader = `#version 300 es
 
 precision highp float;
@@ -124,6 +137,7 @@ void main(void) {
 }
 `;
 
+// Fragment shader
 const fragmentShader = `#version 300 es
 
 precision highp float;
