@@ -36,8 +36,8 @@ const xNode = actx.createGain();
 const yNode = actx.createGain();
 const analyzerX = actx.createAnalyser();
 const analyzerY = actx.createAnalyser();
-analyzerX.fftSize = 1 << 10
-analyzerY.fftSize = 1 << 10
+// analyzerX.fftSize = 1 << 10
+// analyzerY.fftSize = 1 << 10
 xNode.connect(analyzerX);
 yNode.connect(analyzerY);
 
