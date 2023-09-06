@@ -16,13 +16,40 @@ const actx = new AudioContext();
 // Frequency array
 // index: MIDI number
 // A0: 21, C4: 60, A4: 69, C5: 72, C8: 108
-frequencies = new Array(200);
+
+// Tempered
+const frequenciesTempered = new Array(200);
 for (let i = 69; i < 109; i++) {
-    frequencies[i] = 440 * Math.pow(2, 1.0/12 * (i-69))
+    frequenciesTempered[i] = 440 * Math.pow(2, 1.0/12 * (i-69))
 }
 for (let i = 69; i > 20; i--) {
-    frequencies[i] = 440 * Math.pow(2, -1.0/12 * (69-i))
+    frequenciesTempered[i] = 440 * Math.pow(2, -1.0/12 * (69-i))
 }
+
+// Just intonation
+const frequenciesJustIntonationC = new Array(200);
+const baseC = 440 * 3 / 5;
+frequenciesJustIntonationC[60] = baseC;
+frequenciesJustIntonationC[61] = baseC * 16 / 15;
+frequenciesJustIntonationC[62] = baseC * 9 / 8;
+frequenciesJustIntonationC[63] = baseC * 6 / 5;
+frequenciesJustIntonationC[64] = baseC * 5 / 4;
+frequenciesJustIntonationC[65] = baseC * 4 / 3;
+frequenciesJustIntonationC[66] = baseC * 45 / 32;
+frequenciesJustIntonationC[67] = baseC * 3 / 2;
+frequenciesJustIntonationC[68] = baseC * 8 / 5;
+frequenciesJustIntonationC[69] = baseC * 5 / 3;
+frequenciesJustIntonationC[70] = baseC * 7 / 4;
+frequenciesJustIntonationC[71] = baseC * 15 / 8;
+for (let i = 72; i < 109; i++) {
+    frequenciesJustIntonationC[i] = frequenciesJustIntonationC[i - 12] * 2;
+}
+for (let i = 59; i > 20; i--) {
+    frequenciesJustIntonationC[i] = frequenciesJustIntonationC[i + 12] / 2;
+}
+
+// Default
+frequencies = frequenciesJustIntonationC;
 
 // Keyboard key to MIDI number map
 const keys = "qw3e4rt6y7u8io0p-[]";
