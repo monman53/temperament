@@ -20,22 +20,24 @@
         </g>
     </svg>
 
-    <fieldset @click="resetNote()">
+    <fieldset>
         <legend>Temperament</legend>
         <label>
-            <input type="radio" name="temperament" value="tempered" v-model="temperament" />
+            <input type="radio" name="temperament" value="tempered" v-model="temperament"
+                @change="updateNoteFrequency()" />
             Tempered (A = 440 Hz)
         </label>
         </br>
         <label>
-            <input type="radio" name="temperament" value="just-intonation-c" v-model="temperament" />
+            <input type="radio" name="temperament" value="just-intonation-c" v-model="temperament"
+                @change="updateNoteFrequency()" />
             Just intonation (C dur, A = 440 Hz)
         </label>
     </fieldset>
     <fieldset>
         <legend>Options</legend>
         <label>
-            <input type="checkbox" v-model="useFluctuation">
+            <input type="checkbox" v-model="useFluctuation" @change="updateNoteFrequency()">
             Fluctuation
         </label>
     </fieldset>
@@ -338,6 +340,15 @@
                 for (let i = 0; i < 200; i++) {
                     this.noteOff(i);
                 }
+            },
+            updateNoteFrequency() {
+                // Update frequencies
+                for (const [key, oscillator] of Object.entries(oscillators)) {
+                    const frequency = this.frequencies[key];
+                    // value.frequency.setValueAtTime(frequency, actx.currentTime);
+                    oscillator.frequency.value = frequency;
+                }
+
             }
         },
         computed: {
