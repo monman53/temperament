@@ -1,5 +1,22 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Temperament Lissajous</title>
+
 <div id="app">
-    <canvas height="400" width="400" id="canvas"></canvas>
+    <canvas width="400" height="400" id="canvas"></canvas>
+    </br>
+
+    <svg width="400" height="200">
+        <g v-for="(item, index) in keyboard">
+            <rect :width="keyboardWidth(item, 10)" :height="keyboardHeight(item, 180, 100)" :x="keyboardX(item, 10)"
+                y="5" :fill="keyboardFill(item)" stroke="black" />
+        </g>
+        <g v-for="(item, index) in keyboard">
+            <g v-if="keyboardFill(item) == 'black'">
+                <rect :width="keyboardWidth(item, 10)" :height="keyboardHeight(item, 180, 100)" :x="keyboardX(item, 10)"
+                    y="5" :fill="keyboardFill(item)" stroke="black" />
+            </g>
+        </g>
+    </svg>
 
     <fieldset>
         <legend>Temperament</legend>
@@ -173,12 +190,74 @@
                 count: 0,
                 fps: 0,
                 fftSize: 2048,
+                keyboard: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72],
             }
         },
         methods: {
-            increment() {
-                this.count++;
-            }
+            keyboardX(keyId, pitch) {
+                switch (keyId % 12) {
+                    case 0:
+                        return pitch * 0;
+                    case 1:
+                        return pitch * 2;
+                    case 2:
+                        return pitch * 3;
+                    case 3:
+                        return pitch * 5;
+                    case 4:
+                        return pitch * 6;
+                    case 5:
+                        return pitch * 9;
+                    case 6:
+                        return pitch * 11;
+                    case 7:
+                        return pitch * 12;
+                    case 8:
+                        return pitch * 14;
+                    case 9:
+                        return pitch * 15;
+                    case 10:
+                        return pitch * 17;
+                    case 11:
+                        return pitch * 18;
+                }
+            },
+            keyboardFill(keyId) {
+                switch (keyId % 12) {
+                    case 1:
+                    case 3:
+                    case 6:
+                    case 8:
+                    case 10:
+                        return "black";
+                    default:
+                        return "white";
+                }
+            },
+            keyboardHeight(keyId, heightWhite, heightBlack) {
+                switch (keyId % 12) {
+                    case 1:
+                    case 3:
+                    case 6:
+                    case 8:
+                    case 10:
+                        return heightBlack;
+                    default:
+                        return heightWhite;
+                }
+            },
+            keyboardWidth(keyId, pitch) {
+                switch (keyId % 12) {
+                    case 1:
+                    case 3:
+                    case 6:
+                    case 8:
+                    case 10:
+                        return pitch * 2;
+                    default:
+                        return pitch * 3;
+                }
+            },
         },
         computed: {
             frequencies() {
