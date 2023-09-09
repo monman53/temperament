@@ -218,14 +218,15 @@ void main(void) {
                 }
 
                 // Create an oscillator
+                const frequency = this.frequencies[MIDIidx];
                 const oscillator = actx.createOscillator();
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(this.frequencies[MIDIidx], actx.currentTime);
+                oscillator.frequency.setValueAtTime(frequency, actx.currentTime);
 
                 // Connect to the gain node
                 // NOTE: For avoiding distortion
                 const amp = actx.createGain();
-                amp.gain.value = 0.1;
+                amp.gain.value = Math.min(0.1 * 440 / frequency, 0.2);
                 oscillator.connect(amp);
 
                 // Connect to the output speaker
