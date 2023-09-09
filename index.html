@@ -421,8 +421,10 @@
                 console.log('Could not access your MIDI devices.');
             }
 
-            navigator.requestMIDIAccess()
-                .then(onMIDISuccess, onMIDIFailure);
+            if (this.available.midi) {
+                navigator.requestMIDIAccess()
+                    .then(onMIDISuccess, onMIDIFailure);
+            }
 
             //--------------------------------
             // WebGL setup
