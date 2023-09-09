@@ -9,18 +9,18 @@
         <g v-for="(item, index) in keyboard">
             <rect :width="keyboardWidth(item, keyboardPitch)" :height="keyboardHeight(item, 180, 100)"
                 :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item, isNoteOn[item])"
-                stroke="black" />
+                stroke="black" @click="noteToggle(item)" />
         </g>
         <g v-for="(item, index) in keyboard">
             <g v-if="isBlackKey(item)">
                 <rect :width="keyboardWidth(item, keyboardPitch)" :height="keyboardHeight(item, 180, 100)"
                     :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item, isNoteOn[item])"
-                    stroke="black" />
+                    stroke="black" @click="noteToggle(item)" />
             </g>
         </g>
     </svg>
 
-    <fieldset>
+    <fieldset @click="resetNote()">
         <legend>Temperament</legend>
         <label>
             <input type="radio" name="temperament" value="tempered" v-model="temperament" />
@@ -133,6 +133,20 @@
         keyToMIDI[keys[i]] = 59 + i;
     }
 
+    // Oscillator instances
+    const oscillators = {}
+    let counter = 0;
+
+    // Intermediate nodes for Lissajous curve visualization
+    const xNode = actx.createGain();
+    const yNode = actx.createGain();
+    const analyzerX = actx.createAnalyser();
+    const analyzerY = actx.createAnalyser();
+    const fftSize = 1 << 11;
+    analyzerX.fftSize = fftSize;
+    analyzerY.fftSize = fftSize;
+    xNode.connect(analyzerX);
+    yNode.connect(analyzerY);
 
     //================================
     // Lissajous curve visualization (WebGL)
@@ -261,41 +275,7 @@
                         return pitch * 3;
                 }
             },
-        },
-        computed: {
-            frequencies() {
-                // Default
-                const fs = new Array(200);
-                const source = this.temperament === "tempered" ? frequenciesTempered : frequenciesJustIntonationC;
-                let fluctuationRatio = this.useFluctuation ? 0.00005 : 0.0;
-                const addFluctuation = (freq) => {
-                    const ratio = fluctuationRatio;
-                    return freq * (1.0 + ratio * (Math.random() - 0.5));
-                }
-                for (let i = 0; i < 200; i++) {
-                    fs[i] = addFluctuation(source[i])
-                }
-                return fs;
-            }
-        },
-        mounted() {
-            // Intermediate nodes for Lissajous curve visualization
-            const xNode = actx.createGain();
-            const yNode = actx.createGain();
-            const analyzerX = actx.createAnalyser();
-            const analyzerY = actx.createAnalyser();
-            const fftSize = 1 << 11;
-            analyzerX.fftSize = fftSize;
-            analyzerY.fftSize = fftSize;
-            xNode.connect(analyzerX);
-            yNode.connect(analyzerY);
-
-            // Oscillator instances
-            const oscillators = {}
-            let counter = 0;
-
-            // Control functions
-            const noteOn = (key) => {
+            noteOn(key) {
                 const MIDIidx = key;
 
                 // Avoiding double allocation
@@ -331,9 +311,8 @@
                     oscillator.connect(yNode);
                 }
                 counter = 1 - counter;
-            }
-
-            const noteOff = (key) => {
+            },
+            noteOff(key) {
                 const MIDIidx = key;
 
                 if (!(MIDIidx in oscillators)) {
@@ -343,7 +322,37 @@
                 oscillators[MIDIidx].stop();
                 delete oscillators[MIDIidx];
                 this.isNoteOn[MIDIidx] = false;
+            },
+            noteToggle(key) {
+                if (this.isNoteOn[key]) {
+                    this.noteOff(key);
+                } else {
+                    this.noteOn(key);
+                }
+            },
+            resetNote() {
+                for (let i = 0; i < 200; i++) {
+                    this.noteOff(i);
+                }
             }
+        },
+        computed: {
+            frequencies() {
+                // Default
+                const fs = new Array(200);
+                const source = this.temperament === "tempered" ? frequenciesTempered : frequenciesJustIntonationC;
+                let fluctuationRatio = this.useFluctuation ? 0.00005 : 0.0;
+                const addFluctuation = (freq) => {
+                    const ratio = fluctuationRatio;
+                    return freq * (1.0 + ratio * (Math.random() - 0.5));
+                }
+                for (let i = 0; i < 200; i++) {
+                    fs[i] = addFluctuation(source[i])
+                }
+                return fs;
+            }
+        },
+        mounted() {
 
             //--------------------------------
             // Keyboard interactions
@@ -360,7 +369,7 @@
                     return;
                 }
 
-                noteOn(MIDIidx);
+                this.noteOn(MIDIidx);
             })
 
             window.addEventListener('keyup', (e) => {
@@ -369,7 +378,7 @@
                     return;
                 }
 
-                noteOff(MIDIidx);
+                this.noteOff(MIDIidx);
             })
 
             //================================
@@ -382,12 +391,12 @@
 
                 // noteOn
                 if (144 <= command && command <= 159) {
-                    noteOn(key);
+                    this.noteOn(key);
                 }
 
                 // noteOff
                 if (128 <= command && command <= 143) {
-                    noteOff(key);
+                    this.noteOff(key);
                 }
             }
 
