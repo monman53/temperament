@@ -8,12 +8,14 @@
     <svg width="400" height="200">
         <g v-for="(item, index) in keyboard">
             <rect :width="keyboardWidth(item, keyboardPitch)" :height="keyboardHeight(item, 180, 100)"
-                :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item)" stroke="black" />
+                :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item, isNoteOn[item])"
+                stroke="black" />
         </g>
         <g v-for="(item, index) in keyboard">
-            <g v-if="keyboardFill(item) == 'black'">
+            <g v-if="isBlackKey(item)">
                 <rect :width="keyboardWidth(item, keyboardPitch)" :height="keyboardHeight(item, 180, 100)"
-                    :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item)" stroke="black" />
+                    :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item, isNoteOn[item])"
+                    stroke="black" />
             </g>
         </g>
     </svg>
@@ -191,6 +193,7 @@
                 fps: 0,
                 fftSize: 2048,
                 keyboard: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72],
+                isNoteOn: Array(200).fill(false),
                 keyboardPitch: 16,
             }
         },
@@ -224,29 +227,27 @@
                         return offset + pitch * 18;
                 }
             },
-            keyboardFill(keyId) {
+            isBlackKey(keyId) {
                 switch (keyId % 12) {
                     case 1:
                     case 3:
                     case 6:
                     case 8:
                     case 10:
-                        return "black";
+                        return true;
                     default:
-                        return "white";
+                        return false;
+                }
+            },
+            keyboardFill(keyId, pressed) {
+                if (pressed) {
+                    return "gray";
+                } else {
+                    return this.isBlackKey(keyId) ? "black" : "white";
                 }
             },
             keyboardHeight(keyId, heightWhite, heightBlack) {
-                switch (keyId % 12) {
-                    case 1:
-                    case 3:
-                    case 6:
-                    case 8:
-                    case 10:
-                        return heightBlack;
-                    default:
-                        return heightWhite;
-                }
+                return this.isBlackKey(keyId) ? heightBlack : heightWhite;
             },
             keyboardWidth(keyId, pitch) {
                 switch (keyId % 12) {
@@ -320,6 +321,7 @@
                 // Start oscillator and register
                 oscillator.start()
                 oscillators[MIDIidx] = oscillator
+                this.isNoteOn[MIDIidx] = true;
 
                 // Also connect to the visualization nodes
                 // NOTE: Distribute by ping-pong
@@ -340,6 +342,7 @@
 
                 oscillators[MIDIidx].stop();
                 delete oscillators[MIDIidx];
+                this.isNoteOn[MIDIidx] = false;
             }
 
             //--------------------------------
@@ -395,7 +398,6 @@
             }
 
             const onMIDISuccess = (midiAccess) => {
-                console.log(midiAccess);
                 for (var input of midiAccess.inputs.values()) {
                     input.onmidimessage = getMIDIMessage;
                 }
