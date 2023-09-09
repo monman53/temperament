@@ -30,6 +30,39 @@
     </fieldset>
 </div>
 
+<script type="x-shader/x-vertex" id="vertex-shader">#version 300 es
+    precision highp float;
+
+    layout (location = 0) in float x_value;
+    layout (location = 1) in float y_value;
+
+    out float intensity;
+
+    void main(void) {
+        intensity = sqrt(float(gl_VertexID) / 2048.0);
+        gl_PointSize = 10.0;
+        gl_Position = vec4(
+            x_value * 0.3,
+            y_value * 0.3,
+            0.0,
+            1.0
+        );
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fragment-shader">#version 300 es
+    precision highp float;
+
+    in float intensity;
+    out vec4 fragColor;
+
+    void main(void) {
+        // Green
+        vec3 green = vec3(0.4, 1.0, 0.6) * intensity;
+        fragColor = vec4(green, 1.0);
+    }
+</script>
+
 <script type="module">
     //================================
     // Synthesizer (Web Audio API)
@@ -91,41 +124,10 @@
     //--------------------------------
 
     // Vertex shader
-    const vertexShader = `#version 300 es
-
-precision highp float;
-
-layout (location = 0) in float x_value;
-layout (location = 1) in float y_value;
-
-out float intensity;
-
-void main(void) {
-  intensity = sqrt(float(gl_VertexID) / 2048.0);
-  gl_PointSize = 10.0;
-  gl_Position = vec4(
-    x_value * 0.3,
-    y_value * 0.3,
-    0.0,
-    1.0
-  );
-}
-`;
+    const vertexShader = document.querySelector("#vertex-shader").innerHTML;
 
     // Fragment shader
-    const fragmentShader = `#version 300 es
-
-precision highp float;
-
-in float intensity;
-out vec4 fragColor;
-
-void main(void) {
-  // Green
-  vec3 green = vec3(0.4, 1.0, 0.6) * intensity;
-  fragColor = vec4(green, 1.0);
-}
-`;
+    const fragmentShader = document.querySelector("#fragment-shader").innerHTML;
 
     //--------------------------------
     // Support functions for WebGL
