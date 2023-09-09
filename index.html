@@ -59,7 +59,7 @@
         <label>
             <input type="radio" name="temperament" value="tempered" v-model="temperament"
                 @change="updateNoteFrequency()" />
-            Tempered (A = 440 Hz)
+            Equal temperament (A = 440 Hz)
         </label>
         </br>
         <label>
@@ -67,16 +67,22 @@
                 @change="updateNoteFrequency()" />
             Just intonation (C dur, A = 440 Hz)
         </label>
+        </br>
     </fieldset>
     <fieldset>
         <legend>Options</legend>
         <label>
             <input type="checkbox" v-model="useFluctuation" @change="updateNoteFrequency()">
-            Fluctuation
+            Random detune (just for fun visualization)
+        </label>
+        </br>
+        <label>
+            <input type="checkbox" v-model="debug">
+            Show debug outputs
         </label>
     </fieldset>
-    <fieldset>
-        <legend>Info</legend>
+    <fieldset v-if="debug">
+        <legend>Debug</legend>
         <ul>
             <li>Temperament: {{ temperament }}</li>
             <li>useFluctuation: {{ useFluctuation }}</li>
@@ -85,6 +91,82 @@
             <li>MIDI available: {{ available.midi}}</li>
         </ul>
     </fieldset>
+
+    <h2>Description</h2>
+    <p>This is a visualization tool for music temperament. The complex shapes that appear with sounds on the black
+        canvas are called <a href="Lissajous curve">Lissajous curve</a>. This curve represents frequency ratio between
+        the notes that compose a chord. For the classical temperaments (like just-intonation temperament) uses integer
+        ratios for many intervals. This means that the Lissajous curves doesn't move in many chords for the classical
+        temperaments, unlike the modern temperament (equal temperament), which uses an irrational number (2^(1/12)) for
+        the interval ratios.</p>
+    <p>The sounds are alternately added into x and y streams in the order you play. The shape represents most recent
+        (1024 / sampling_rate (= 44100 in most case) [sec] sound waves.</p>
+    <p>This work is inspired by and emulation of <a href="https://youtu.be/6NlI4No3s0M">this video</a> originated(?)
+        from Justonic Tuning Inc.</p>
+    <h2>Features</h2>
+    <ul>
+        <li>MIDI input (only for "noteOn" and "noteOff" operations)</li>
+        <li>Random detune (just for fun visualization and reproduction of original YouTube video.)</li>
+        <li>Wide range of notes (C-1 to G9)</li>
+        <li>Single HTML app (Internet access is needed)</li>
+        <li>Mobile friendly (maybe)</li>
+    </ul>
+    <h2>Q&A</h2>
+    <ul>
+        <li>
+            Q. MIDI device doesn't work.
+            <ul>
+                <li>A. Enable the checkbox "debug" on "Options" and check if MIDI input is available on your browser.
+                </li>
+                <li>A. Use Chrome. <a href="https://caniuse.com/midi">https://caniuse.com/midi</a></li>
+                <li>A. Reload this page and touch anywhere on this page before using MIDI device. <a
+                        href="https://developer.chrome.com/blog/autoplay/#webaudio">Chrome needs human
+                        interaction before using Web Audio API</a>.</li>
+            </ul>
+        </li>
+        <li>
+            Q. Why is the shape of the Lissajous curve changes every time for the same chord?
+            <ul>
+                <li>A. Because the phase of the each note changes every time you press it. </li>
+                <li>A. Because the order of key pressing is different.</li>
+            </ul>
+        </li>
+        <li>
+            Q. Why is the Lissajous curve slightly moves even for the just-intonation chords?
+            <ul>
+                <li>A. Check if the "Random detune" option is enabled. This option emulates human error in real
+                    instrument tuning. This option is only for the purpose of mimicking original YouTube movie.</li>
+            </ul>
+        </li>
+    </ul>
+    <h2>Used technologies</h2>
+    <ul>
+        <li>HTML / Javascript</li>
+        <li>Vue.js 3</li>
+        <li>WebGL2</li>
+        <li>Web Audio API</li>
+        <li>Web MIDI API</li>
+    </ul>
+    <h2>Future works</h2>
+    <ul>
+        <li>Add more temperaments</li>
+        <li>Add non-hold mode for keyboard</li>
+        <li>Microphone input (hard because I don't know better way for filtering frequencies)</li>
+        <li>More friendly UI</li>
+    </ul>
+    <h2>References</h2>
+    <ul>
+        <li><a href="http://web.archive.org/web/20160209025444/http://www.justonic.com/">Justonic Tuning Inc. (web
+                archive)</a></li>
+        <li><a href="https://youtu.be/6NlI4No3s0M">Just Intonation vs Equal Temperament</a></li>
+        <li><a href="https://en.wikipedia.org/wiki/Just_intonation">Just intonation : Wikipedia</a></li>
+        <li><a href="http://www.stby-2nd.sakura.ne.jp/page25/index.html">ストレングスビヨンド: 余話...</a></li>
+    </ul>
+    <h2>Contacts</h2>
+    <ul>
+        <li><a href="https://github.com/monman53/temperament">GitHub</a></li>
+        <li><a href="https://twitter.com/monman53">Twitter</a></li>
+    </ul>
 </div>
 
 <script type="x-shader/x-vertex" id="vertex-shader">#version 300 es
@@ -248,7 +330,8 @@
                 available: {
                     webgl2: false,
                     midi: false,
-                }
+                },
+                debug: false,
             }
         },
         methods: {
