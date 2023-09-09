@@ -255,6 +255,7 @@
 
     // Oscillator instances
     const oscillators = {}
+    let counter = 0;
 
     // Intermediate nodes for Lissajous curve visualization
     const xNode = actx.createGain();
@@ -423,12 +424,13 @@
                 this.isNoteOn[MIDIidx] = true;
 
                 // Also connect to the visualization nodes
-                const pressedNotes = Object.keys(oscillators).length;
-                if (pressedNotes % 2 == 0) {
+                // const pressedNotes = Object.keys(oscillators).length;
+                if (counter % 2 == 0) {
                     oscillator.connect(xNode);
                 } else {
                     oscillator.connect(yNode);
                 }
+                counter += 1;
             },
             noteOff(key) {
                 const MIDIidx = key;
