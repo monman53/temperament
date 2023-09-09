@@ -45,6 +45,8 @@
             <li>Temperament: {{ temperament }}</li>
             <li>useFluctuation: {{ useFluctuation }}</li>
             <li>fps: {{ fps }}</li>
+            <li>WebGL2 available: {{ available.webgl2 }}</li>
+            <li>MIDI available: {{ available.midi}}</li>
         </ul>
     </fieldset>
 </div>
@@ -208,6 +210,10 @@
                 keyboard: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72],
                 isNoteOn: Array(200).fill(false),
                 keyboardPitch: 16,
+                available: {
+                    webgl2: false,
+                    midi: false,
+                }
             }
         },
         methods: {
@@ -400,6 +406,7 @@
 
             if (navigator.requestMIDIAccess) {
                 console.log('This browser supports WebMIDI!');
+                this.available.midi = true;
             } else {
                 console.log('WebMIDI is not supported in this browser.');
             }
@@ -422,6 +429,7 @@
             //--------------------------------
             const canvas = document.getElementById("canvas");
             const gl = canvas.getContext('webgl2');
+            this.available.webgl2 = gl instanceof WebGL2RenderingContext;
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             const program = createProgram(gl,
                 createShader(gl, vertexShader, gl.VERTEX_SHADER),
