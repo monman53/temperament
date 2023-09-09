@@ -5,20 +5,28 @@
     <canvas width="400" height="400" id="canvas"></canvas>
     </br>
 
-    <svg width="400" height="200">
-        <g v-for="(item, index) in keyboard">
-            <rect :width="keyboardWidth(item, keyboardPitch)" :height="keyboardHeight(item, 180, 100)"
-                :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item, isNoteOn[item])"
-                stroke="black" @click="noteToggle(item)" />
-        </g>
-        <g v-for="(item, index) in keyboard">
-            <g v-if="isBlackKey(item)">
-                <rect :width="keyboardWidth(item, keyboardPitch)" :height="keyboardHeight(item, 180, 100)"
-                    :x="keyboardX(item, keyboard[0], keyboardPitch)" y="5" :fill="keyboardFill(item, isNoteOn[item])"
-                    stroke="black" @click="noteToggle(item)" />
+    <div style="overflow-x: scroll;" id="svg-container">
+        <svg :width="128 / 12 * 7 * 3 * keyboardPitch" height="200">
+            <!-- White keys -->
+            <g v-for="i in 128">
+                <g v-if="!isBlackKey(i-1)">
+                    <rect :width="keyboardWidth(i-1, keyboardPitch)" :height="keyboardHeight(i-1, 180, 100)"
+                        :x="keyboardX(i-1, 0, keyboardPitch)" y="5" :fill="keyboardFill(i-1, isNoteOn[i-1])"
+                        stroke="black" @click="noteToggle(i-1)" />
+                </g>
             </g>
-        </g>
-    </svg>
+            <!-- Black keys -->
+            <g v-for="i in 128">
+                <g v-if="isBlackKey(i-1)">
+                    <rect :width="keyboardWidth(i-1, keyboardPitch)" :height="keyboardHeight(i-1, 180, 100)"
+                        :x="keyboardX(i-1, 0, keyboardPitch)" y="5" :fill="keyboardFill(i-1, isNoteOn[i-1])"
+                        stroke="black" @click="noteToggle(i-1)" />
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <button @click="resetNote()">Reset</button>
 
     <fieldset>
         <legend>Temperament</legend>
@@ -100,16 +108,16 @@
     //   e.g) 21: A0, 60: C4, 69: A4, 72: C5, 108: C8
 
     // Tempered
-    const frequenciesTempered = new Array(200);
-    for (let i = 69; i < 109; i++) {
+    const frequenciesTempered = new Array(128);
+    for (let i = 69; i < 128; i++) {
         frequenciesTempered[i] = 440 * Math.pow(2, 1.0 / 12 * (i - 69));
     }
-    for (let i = 69; i > 20; i--) {
+    for (let i = 69; i >= 0; i--) {
         frequenciesTempered[i] = 440 * Math.pow(2, -1.0 / 12 * (69 - i));
     }
 
     // Just intonation
-    const frequenciesJustIntonationC = new Array(200);
+    const frequenciesJustIntonationC = new Array(128);
     const baseC = 440 * 3 / 5;
     frequenciesJustIntonationC[60] = baseC;
     frequenciesJustIntonationC[61] = baseC * 16 / 15;
@@ -123,10 +131,10 @@
     frequenciesJustIntonationC[69] = baseC * 5 / 3;
     frequenciesJustIntonationC[70] = baseC * 7 / 4;
     frequenciesJustIntonationC[71] = baseC * 15 / 8;
-    for (let i = 72; i < 109; i++) {
+    for (let i = 72; i < 128; i++) {
         frequenciesJustIntonationC[i] = frequenciesJustIntonationC[i - 12] * 2;
     }
-    for (let i = 59; i > 20; i--) {
+    for (let i = 59; i >= 0; i--) {
         frequenciesJustIntonationC[i] = frequenciesJustIntonationC[i + 12] / 2;
     }
 
@@ -209,8 +217,7 @@
                 count: 0,
                 fps: 0,
                 fftSize: 2048,
-                keyboard: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72],
-                isNoteOn: Array(200).fill(false),
+                isNoteOn: Array(128).fill(false),
                 keyboardPitch: 16,
                 available: {
                     webgl2: false,
@@ -299,7 +306,7 @@
                 // Connect to the gain node
                 // NOTE: For avoiding distortion
                 const amp = actx.createGain();
-                amp.gain.value = Math.min(0.1 * 440 / frequency, 0.2);
+                amp.gain.value = Math.min(0.1 * 440 * 440 / frequency / frequency, 0.2);
                 oscillator.connect(amp);
 
                 // Connect to the output speaker
@@ -337,7 +344,7 @@
                 }
             },
             resetNote() {
-                for (let i = 0; i < 200; i++) {
+                for (let i = 0; i < 128; i++) {
                     this.noteOff(i);
                 }
             },
@@ -354,20 +361,21 @@
         computed: {
             frequencies() {
                 // Default
-                const fs = new Array(200);
+                const fs = new Array(128);
                 const source = this.temperament === "tempered" ? frequenciesTempered : frequenciesJustIntonationC;
                 let fluctuationRatio = this.useFluctuation ? 0.00005 : 0.0;
                 const addFluctuation = (freq) => {
                     const ratio = fluctuationRatio;
                     return freq * (1.0 + ratio * (Math.random() - 0.5));
                 }
-                for (let i = 0; i < 200; i++) {
+                for (let i = 0; i < 128; i++) {
                     fs[i] = addFluctuation(source[i])
                 }
                 return fs;
             }
         },
         mounted() {
+            document.getElementById("svg-container").scrollLeft = 60 / 12 * 7 * 3 * this.keyboardPitch;
 
             //--------------------------------
             // Keyboard interactions
