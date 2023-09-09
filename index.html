@@ -13,6 +13,17 @@
     #svg-container {
         overflow-x: scroll;
     }
+
+    svg text {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    svg text::selection {
+        background: none;
+    }
 </style>
 
 <div id="app">
